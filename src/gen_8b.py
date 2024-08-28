@@ -13,8 +13,10 @@ def generate_simplified(pipeline, prompt):
     2. Replacing or defining rarely-used terms.
 
     **Guidelines**:
+    - Target audience: grade 8~12 students.
     - For sentences that seem complex, rephrase them in simpler terms.
     - If you encounter unfamiliar or rare words, either replace them with a commonly known synonym or provide a concise definition.
+    - Must generate some words.
 
     Note: In the training samples, complex sentences are flagged with `<rephrase>` and rare terms with `<rare>`. However, these tokens won't appear in testing samples. You'll need to recognize and address such complexities independently.
 
@@ -31,17 +33,22 @@ def generate_simplified(pipeline, prompt):
     444 patients, aged 27-65 with high blood pressure and no recent treatment, were studied.
     The tongue can block breathing, mostly seen in unconscious people or those who've had a sudden heart stoppage.
 
-    Your task: Apply these guidelines to simplify the provided texts.
+    Your task: Apply these guidelines to simplify the provided texts. 
 
-    Now simplify the following sentence: {prompt}
+    Now simplify the following sentence: 
+    **Original**:
+    {prompt}
+
+    **Simplified**:
     """
 
     outputs = pipeline(
         messages,
-        max_new_tokens=1024,
+        max_new_tokens=4096,
     )
 
-    return outputs[0]["generated_text"].replace("\n", "").replace("\r", "")
+    # return outputs[0]["generated_text"].replace("\n", "").replace("\r", "")
+    return outputs
 
 
 
@@ -52,8 +59,8 @@ if __name__ == "__main__":
         token = f.read()
         login(token=token, add_to_git_credential=True)
 
-    # filename = "/clwork/zhidong/llama/data/plaba.tsv"
-    filename = "/clwork/zhidong/llama/data/testdata.tsv"
+    filename = "/clwork/zhidong/llama/data/plaba.tsv"
+    # filename = "/clwork/zhidong/llama/data/testdata.tsv"
 
     plaba = pd.read_csv(filename,index_col=None,sep='\t')
 
@@ -65,7 +72,7 @@ if __name__ == "__main__":
         model_kwargs={"torch_dtype": torch.bfloat16},
         # device_map="auto",
         device=0,
-        batch_size=16,
+        batch_size=128,
     )
     print('----------generating----------')
     result = [generate_simplified(pipeline, text) for text in plaba['Abstract Sentence']]

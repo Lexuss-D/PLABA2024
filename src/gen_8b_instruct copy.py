@@ -57,7 +57,8 @@ if __name__ == "__main__":
     with open(accesstoken,'r', encoding='utf-8') as f:
         token = f.read()
         login(token=token, add_to_git_credential=True)
-
+        
+    # filename = "/clwork/zhidong/llama/data/plaba.tsv"
     filename = "/clwork/zhidong/llama/data/plaba.tsv"
 
     plaba = pd.read_csv(filename,index_col=None,sep='\t')
