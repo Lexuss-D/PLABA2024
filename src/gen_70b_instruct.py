@@ -53,7 +53,33 @@ def generate_simplified(pipeline, prompt):
 
     return outputs[0]["generated_text"][-1]['content'].replace("\n", "").replace("\r", "")
 
+import re
 
+def extract_simplified_sentence_or_return_original(text):
+    # Use regex to find the sentence that follows the phrases indicating simplification
+    match = re.search(r"simplified sentence would be:\s*\"(.*?)\"|even simpler terms:\s*\"(.*?)\"", text)
+
+    # If a match is found, return the simplified sentence
+    if match:
+        return match.group(1) if match.group(1) else match.group(2)
+
+    # If no match is found, return the original text
+    return text
+
+def postprocesing(data):
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's a simplified version:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's a simplified version of the sentence:\"",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's a simplified version of the sentence:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's a simplified version:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Simplified:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("**Simplified**:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's a simplified version of the given sentence:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's the simplified version of the sentence:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("Here's the simplified version:",""))
+  data['generated']=data['generated'].apply(lambda x: x.replace("\"",""))
+  data['generated']=data['generated'].apply(lambda x: extract_simplified_sentence_or_return_original(x))
+  return data
+ 
 
 if __name__ == "__main__":
     
@@ -63,7 +89,7 @@ if __name__ == "__main__":
         login(token=token, add_to_git_credential=True)
 
     # filename = "/clwork/zhidong/llama/data/plaba.tsv"
-    filename = "/clwork/zhidong/llama/data/plaba.tsv"
+    filename = "/clwork/zhidong/llama/data/plabatest.tsv"
 
     plaba = pd.read_csv(filename,index_col=None,sep='\t')
 
@@ -75,15 +101,20 @@ if __name__ == "__main__":
         model_kwargs={"torch_dtype": torch.bfloat16},
         device_map="auto",
         # device=0,
-        batch_size=16,
+        batch_size=256,
     )
     print('----------generating----------')
     start = time.time() 
-    result = [generate_simplified(pipeline, text) for text in plaba['Abstract Sentence']]
+
+    print(len(plaba["sentence"]))
+    
+    result = [generate_simplified(pipeline, text) for text in plaba['sentence']]
     end = time.time() 
     time_diff = end - start  # 処理完了後の時刻から処理開始前の時刻を減算する
     print(time_diff)
 
     plaba['generated'] = result
-    plaba.to_csv("/clwork/zhidong/llama/data/plaba_generated_70b_instruct.tsv",sep="\t",encoding="utf-8",index=None)
+    plaba.to_csv("/clwork/zhidong/llama/data/plaba_generated_70b_instruct_testdata.tsv",sep="\t",encoding="utf-8",index=None)
+    plaba = postprocesing(plaba)
+    plaba.to_csv("/clwork/zhidong/llama/data/plaba_generated_70b_instruct_testdata_postprocessed.tsv",sep="\t",encoding="utf-8",index=None)
 
